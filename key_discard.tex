@@ -20,7 +20,6 @@
     linkcolor=black,
     urlcolor=black
 }
-
 \title{QUIC Handshake Key Discard Alternatives}
 \author{Eric Rescorla}
 \date{\today}
@@ -48,15 +47,15 @@
   \action*{Client knows 1-RTT keys; Handshake Complete}{cl}
   \action*{Handshake Complete}{sr}
   \nextlevel[2]
-  \mess{\emph{Application [DATA]}}{cl}{sr}
+  \mess{\emph{1-RTT [DATA]}}{cl}{sr}
   \nextlevel[2]
-  \mess{\emph{Application [DATA, ACK]}}{sr}{cl}
+  \mess{\emph{1-RTT [DATA, ACK]}}{sr}{cl}
   \nextlevel
-  \action*{Handshake Confirmed}{cl}  
-  \nextlevel[2]  
-  \mess{\emph{Application [ACK]}}{cl}{sr}
+  \action*{Handshake Confirmed; Drop Handshake Keys}{cl}
+  \nextlevel[3]  
+  \mess{\emph{1-RTT [ACK]}}{cl}{sr}
   \nextlevel    
-  \action*{Handshake Confirmed}{sr}
+  \action*{Handshake Confirmed; Drop Handshake Keys}{sr}
   \nextlevel[2]
   
   \nextlevel[2]
@@ -66,6 +65,11 @@
 \caption{Basic QUIC handshake (without 0.5 RTT data).}
 \label{fig:basic-handshake}
 \end{figure}
+
+Figure~\ref{fig:basic-handshake} shows the basic QUIC handshake along
+with the various checkpoints. This just for reference and hopefully
+non-controversial.
+
 
 
 
