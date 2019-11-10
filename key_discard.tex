@@ -27,7 +27,47 @@
 
 \begin{document}
 
-\maketitle
+\begin{figure}[th!]
+\begin{center}
+\resizebox{0.8\columnwidth}{!}{\begin{msc}{}
+  \drawframe{none}
+  \setlength{\topheaddist}{0cm}
+  \setlength{\instdist}{8.5cm}
+  \setlength{\instwidth}{1.75cm}
+  \declinst{cl}{}{Client $C$}
+  \declinst{sr}{}{Server $S$}
+
+  \mess{\emph{Initial [C]}}{cl}{sr}
+  \nextlevel[2]
+  \mess{\emph{Initial [SH], Handshsake[EE...SFIN]}}{sr}{cl}
+  \nextlevel
+  \action*{Server knows 1-RTT keys}{sr}
+  \nextlevel[2]
+  \mess{\emph{Handshake [CFIN]}}{cl}{sr}
+  \nextlevel
+  \action*{Client knows 1-RTT keys; Handshake Complete}{cl}
+  \action*{Handshake Complete}{sr}
+  \nextlevel[2]
+  \mess{\emph{Application [DATA]}}{cl}{sr}
+  \nextlevel[2]
+  \mess{\emph{Application [DATA, ACK]}}{sr}{cl}
+  \nextlevel
+  \action*{Handshake Confirmed}{cl}  
+  \nextlevel[2]  
+  \mess{\emph{Application [ACK]}}{cl}{sr}
+  \nextlevel    
+  \action*{Handshake Confirmed}{sr}
+  \nextlevel[2]
+  
+  \nextlevel[2]
+\end{msc}
+}
+\end{center}
+\caption{Basic QUIC handshake (without 0.5 RTT data).}
+\label{fig:basic-handshake}
+\end{figure}
+
+
 
 \end{document}
 
