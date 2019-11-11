@@ -147,6 +147,11 @@ Note that the converse case cannot happen: the client cannot
 initiate migration until handshake confirmed and it is required
 to drop the handshake keys at that point.
 
+\textbf{QUESTION}: Do current implementations (especially clients)
+ACK handshake packets prior to handshake confirmed? If so,
+this case ought to be quite rare.
+
+
 \section{Never Drop the Keys (PR 3121)}
 \label{sec:never-drop-keys}
 
@@ -258,15 +263,24 @@ the other side has key $n$''. And this just lets us have the usual
 rule without a special case for the handshake $\rightarrow$ 1-RTT
 transition.
 
-Point (2) needs some elaboration. As a general matter, performing
-migration while any handshake data is outstanding is a recipe for
-bridging the two paths. In the current document this is addressed by
-(1) requiring that the client not initiate migration prior to handshake
-confirmed and (2) requiring that the 
+Point (2) is the same issue as is raised in
+Section~\ref{sec:outst-handsh-data} above. It is possible that this
+case is less likely with the ``never drop keys'' approach because
+the client is required to send ACKs for handshake data. Thus, if
+the client piggybacks ACKs for the server's handshake packets
+on its own CFIN (which is natural), the server will never be
+able to process 1-RTT packets from the client when handshake
+data is outstanding, in which case the problem goes away. Note
+that this is separate from the packet loss edge cases, because
+the client can guarantee this condition.
 
-
-
-
+An alternative approach is to have the server implement
+implicit ACK where it discards handshake data once it receives
+any valid 1-RTT data from the client. Note that it still needs to
+be able to receive handshake data and send ACKs for it, but
+the client can be required to send that down the initial
+path and/or implicitly ACK on migration success (which inevitably
+includes verification of a 1-RTT ACK).
 
 
 
