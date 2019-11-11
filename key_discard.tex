@@ -11,6 +11,7 @@
 \usepackage{paralist}
 \usepackage{algorithm,algorithmic}
 \usepackage{amsmath, amssymb, amsthm, amsfonts, caption, stmaryrd, mathtools, syntax, mdframed}
+\usepackage{float}
 \usepackage{cryptocode}
 \usepackage{hyperref}
 \hypersetup{
@@ -30,7 +31,7 @@
 \label{sec:status-quo}
 
 
-\begin{figure}[h!]
+\begin{figure}[H]
 \begin{center}
 \resizebox{0.8\columnwidth}{!}{\begin{msc}{}
   \drawframe{none}
@@ -74,6 +75,74 @@ Figure~\ref{fig:basic-handshake} shows the basic QUIC handshake along
 with the various checkpoints. This just for reference and hopefully
 non-controversial.
 
+This design is known to have several problems, specifically:
+
+\begin{enumerate}
+\item A dropped ACK can cause the client to retransmit CFIN
+  indefinitely.
+\item It is possible for the server to have handshake data
+  outstanding when the client initiates migration. 
+\end{enumerate}
+
+We show these scenarios below.
+
+\subsection{Deadlock with Missing ACKs}
+\label{sec:deadl-with-miss}
+
+[TODO: Diagram needed]
+
+\subsection{Outstanding Handshake Data During Migration}
+\label{sec:outst-handsh-data}
+
+Consider the situation shown in 
+\begin{figure}[H]
+\begin{center}
+\resizebox{0.8\columnwidth}{!}{\begin{msc}{}
+  \drawframe{none}
+  \setlength{\topheaddist}{0cm}
+  \setlength{\instdist}{8.5cm}
+  \setlength{\instwidth}{1.75cm}
+  \declinst{cl}{}{Client $C$}
+  \declinst{sr}{}{Server $S$}
+
+  \mess{\emph{Initial [C]}}{cl}{sr}
+  \nextlevel[2]
+  \mess{\emph{Initial [SH], Handshake[EE...SFIN]}}{sr}{cl}
+  \nextlevel
+  \action*{Server knows 1-RTT keys}{sr}
+  \nextlevel[2]
+  \mess{\emph{Handshake [CFIN]}}{cl}{sr}
+  \nextlevel
+  \action*{Client knows 1-RTT keys; Handshake Complete}{cl}
+  \action*{Handshake Complete}{sr}
+  \nextlevel[2]
+  \mess{\emph{1-RTT [DATA]}}{cl}{sr}
+  \nextlevel[2]
+  \mess{\emph{1-RTT [ACK]}}{sr}{cl}
+  \nextlevel
+  \action*{Handshake Confirmed; Drop Handshake Keys}{cl}
+  \nextlevel[2]  
+  \mess{\emph{MIGRATION, 1-RTT [DATA]}}{cl}{sr}  
+  \nextlevel  
+  \action*{Handshake data still outstanding!}{sr}
+  
+  \nextlevel[2]
+\end{msc}
+}
+\end{center}
+\caption{Outstanding handshake data during migration}
+\label{fig:outstanding-handshake-migration}
+\end{figure}
+
+The issue here is that the server's signal that the handshake
+is done is an ACK of its 1-RTT data, but there's no guarantee
+that this precedes the client's migration data, because the
+client can migrate as soon as it has received an ACK of its
+1-RTT data. Even if the server sends its own 1-RTT data in
+the same packet as its ACK, there is no requirement that
+the client ACK at the same time as it sends its migration
+data.
+
 
 \section{Never Drop the Keys (PR 3121)}
 \label{sec:never-drop-keys}
@@ -86,7 +155,7 @@ goes quiescent even if no application data is ever transmitted,
 though you will not reach ``handshake confirmed'' in this
 case, as shown in Figure~\ref{fig:never-drop-1}.
 
-\begin{figure}[h!]
+\begin{figure}[H]
 \begin{center}
 \resizebox{0.8\columnwidth}{!}{\begin{msc}{}
   \drawframe{none}
@@ -122,7 +191,7 @@ One obvious question is what happens in the case where you
 \emph{are} sending data. In the basic case, we would just
 expect ACK piggybacking on the data, as shown in Figure~\ref{fig:never-drop-2}
 
-\begin{figure}[h!]
+\begin{figure}[H]
 \begin{center}
 \resizebox{0.8\columnwidth}{!}{\begin{msc}{}
   \drawframe{none}
