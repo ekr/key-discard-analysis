@@ -26,7 +26,11 @@
 
 \begin{document}
 
-\begin{figure}[th!]
+\section{Status Quo}
+\label{sec:status-quo}
+
+
+\begin{figure}[h!]
 \begin{center}
 \resizebox{0.8\columnwidth}{!}{\begin{msc}{}
   \drawframe{none}
@@ -38,7 +42,7 @@
 
   \mess{\emph{Initial [C]}}{cl}{sr}
   \nextlevel[2]
-  \mess{\emph{Initial [SH], Handshsake[EE...SFIN]}}{sr}{cl}
+  \mess{\emph{Initial [SH], Handshake[EE...SFIN]}}{sr}{cl}
   \nextlevel
   \action*{Server knows 1-RTT keys}{sr}
   \nextlevel[2]
@@ -69,6 +73,127 @@
 Figure~\ref{fig:basic-handshake} shows the basic QUIC handshake along
 with the various checkpoints. This just for reference and hopefully
 non-controversial.
+
+
+\section{Never Drop the Keys (PR 3121)}
+\label{sec:never-drop-keys}
+
+The basic idea here is to (1) never drop the Handshake keys
+and (2) continue to send ACKs for packets you have received
+(as agreed upon separately in YUL, you MUST ACK each
+packet at least once). The result is that the handshake
+goes quiescent even if no application data is ever transmitted,
+though you will not reach ``handshake confirmed'' in this
+case, as shown in Figure~\ref{fig:never-drop-1}.
+
+\begin{figure}[h!]
+\begin{center}
+\resizebox{0.8\columnwidth}{!}{\begin{msc}{}
+  \drawframe{none}
+  \setlength{\topheaddist}{0cm}
+  \setlength{\instdist}{8.5cm}
+  \setlength{\instwidth}{1.75cm}
+  \declinst{cl}{}{Client $C$}
+  \declinst{sr}{}{Server $S$}
+
+  \mess{\emph{Initial [C]}}{cl}{sr}
+  \nextlevel[2]
+  \mess{\emph{Initial [SH], Handshake[EE...SFIN]}}{sr}{cl}
+  \nextlevel
+  \action*{Server knows 1-RTT keys}{sr}
+  \nextlevel[2]
+  \mess{\emph{Handshake [CFIN, ACK]}}{cl}{sr}
+  \nextlevel
+  \action*{Client knows 1-RTT keys; Handshake Complete}{cl}
+  \action*{Handshake Complete}{sr}
+  \nextlevel[3]
+  \mess{\emph{Handshake [ACK]}}{sr}{cl}
+  
+  \nextlevel[2]
+\end{msc}
+}
+\end{center}
+\caption{Never drop keys (no data sent)}
+\label{fig:never-drop-1}
+\end{figure}
+
+
+One obvious question is what happens in the case where you
+\emph{are} sending data. In the basic case, we would just
+expect ACK piggybacking on the data, as shown in Figure~\ref{fig:never-drop-2}
+
+\begin{figure}[h!]
+\begin{center}
+\resizebox{0.8\columnwidth}{!}{\begin{msc}{}
+  \drawframe{none}
+  \setlength{\topheaddist}{0cm}
+  \setlength{\instdist}{8.5cm}
+  \setlength{\instwidth}{1.75cm}
+  \declinst{cl}{}{Client $C$}
+  \declinst{sr}{}{Server $S$}
+
+  \mess{\emph{Initial [C]}}{cl}{sr}
+  \nextlevel[2]
+  \mess{\emph{Initial [SH], Handshake[EE...SFIN]}}{sr}{cl}
+  \nextlevel
+  \action*{Server knows 1-RTT keys}{sr}
+  \nextlevel[2]
+  \mess{\emph{Handshake [CFIN, ACK]}}{cl}{sr}
+  \nextlevel
+  \action*{Client knows 1-RTT keys; Handshake Complete}{cl}
+  \action*{Handshake Complete}{sr}
+  \nextlevel[2]
+  \mess{\emph{1-RTT [DATA]}}{cl}{sr}
+  \nextlevel[2]
+  \mess{\emph{Handshake [ACK], 1-RTT [DATA, ACK]}}{sr}{cl}
+  \nextlevel
+  \action*{Handshake Confirmed}{cl}
+  \nextlevel[3]  
+  \mess{\emph{1-RTT [ACK]}}{cl}{sr}
+  \nextlevel    
+  \action*{Handshake Confirmed}{sr}
+  \nextlevel[2]
+  
+  \nextlevel[2]
+\end{msc}
+}
+\end{center}
+\caption{Never drop keys (data sent)}
+\label{fig:never-drop-2}
+\end{figure}
+
+You can also safely implement implicit ACK. At the point
+where you have handshake confirmed, you can stop sending
+any of your Handshake DATA frames (though you still
+need to ACK any of the peer's Handshake frames, or you
+will get deadlocks if the peer doesn't implement implicit
+ACKs.)
+
+Kazuho had raised two concerns about this design:
+
+\begin{enumerate}
+\item Because handshake confirmed is not guaranteed, key update
+  is confusing.
+\item It is possible to have outstanding handshake data at the
+  point where you want to do migration.
+\end{enumerate}
+
+I don't really understand point (1). As noted in
+\url{https://github.com/quicwg/base-drafts/issues/3212}, the handshake
+confirmed test for key update is redundant, and so we can just re-code
+this as ``don't initiate key update for key $n+1$ until you are sure
+the other side has key $n$''. And this just lets us have the usual
+rule without a special case for the handshake $\rightarrow$ 1-RTT
+transition.
+
+Point (2) needs some elaboration. As a general matter, performing
+migration while any handshake data is outstanding is a recipe for
+bridging the two paths. In the current document this is addressed by
+(1) requiring that the client not initiate migration prior to handshake
+confirmed and (2) requiring that the 
+
+
+
 
 
 
