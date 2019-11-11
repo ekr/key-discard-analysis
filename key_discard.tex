@@ -284,6 +284,74 @@ the client can be required to send that down the initial
 path and/or implicitly ACK on migration success (which inevitably
 includes verification of a 1-RTT ACK).
 
+\section{Server sends HANDSHAKE_DONE(PR 3145)
+}
+\label{sec:serv-sends-handsh}
+
+PR 3145 suggests an explicit signal from the server that the handshake
+is done. This signal, unlike the ACK for the CFIN, is reliably
+retransmitted. Figure~\ref{fig:server-hd} shows this.
+
+
+\begin{figure}[H]
+\begin{center}
+\resizebox{0.8\columnwidth}{!}{\begin{msc}{}
+  \drawframe{none}
+  \setlength{\topheaddist}{0cm}
+  \setlength{\instdist}{8.5cm}
+  \setlength{\instwidth}{1.75cm}
+  \declinst{cl}{}{Client $C$}
+  \declinst{sr}{}{Server $S$}
+
+  \mess{\emph{Initial [C]}}{cl}{sr}
+  \nextlevel[2]
+  \mess{\emph{Initial [SH], Handshake[EE...SFIN]}}{sr}{cl}
+  \nextlevel
+  \action*{Server knows 1-RTT keys}{sr}
+  \nextlevel[2]
+  \mess{\emph{Handshake [CFIN]}}{cl}{sr}
+  \nextlevel
+  \action*{Client knows 1-RTT keys; Handshake Complete}{cl}
+  \action*{Handshake Complete}{sr}
+  \nextlevel[2]
+  \mess{\emph{1-RTT [HANDSHAKE\_DONE]}}{sr}{cl}
+  \nextlevel
+  \action*{Handshake Confirmed; Drop Handshake Keys}{sr}
+  \nextlevel[2]
+  \action*{Handshake Confirmed; Drop Handshake Keys}{cl}
+  \nextlevel[3]  
+  \mess{\emph{1-RTT [ACK]}}{cl}{sr}
+  \nextlevel    
+  \nextlevel[2]
+\end{msc}
+}
+\end{center}
+\caption{Server sends HANDSHAKE\_DONE}
+\label{fig:server-hd}
+\end{figure}
+
+This addresses the migration issue because the server (or at least
+a compliant server) will not send HANDSHAKE\_DONE before it has
+received CFIN. Thus, the client will not consider the handshake
+confirmed if the server has any outstanding handshake data,
+Similarly, the client cannot send any handshake data after handshake
+confirmed.
+
+Note that this diagram shows that the handshake is confirmed on the
+server 1 RTT faster than with either of the two previous cases,
+but equivalent performance can be achieved by having both
+sides send 1-RTT PINGs as soon as they have 1-RTT keys,
+at which point the handshakes will be confirmed at the same
+time (at receipt of the CFIN on the server, and 1-RTT later
+on the client).
+
+[TODO: Make diagram]
+
+
+
+
+
+
 
 
 \end{document}
