@@ -143,6 +143,9 @@ the same packet as its ACK, there is no requirement that
 the client ACK at the same time as it sends its migration
 data.
 
+Note that the converse case cannot happen: the client cannot
+initiate migration until handshake confirmed and it is required
+to drop the handshake keys at that point.
 
 \section{Never Drop the Keys (PR 3121)}
 \label{sec:never-drop-keys}
