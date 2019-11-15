@@ -88,9 +88,57 @@ This design is known to have several problems, specifically:
 
 We show these scenarios below.
 
-\subsection{Deadlock with Missing ACKs}
-\label{sec:deadl-with-miss}
+\subsection{Indefinite CFIN Retranmission}
+\label{sec:indef-cfin-retr}
 
+As shown in Figure~\ref{fig:cfin-retransmit}, if the server's ACK of CFIN
+gets lost but the server sends 1-RTT data and has it ACKed, then the
+server will drop the handshake keys and the client will indefinitely
+retransmit CFIN, at least until it sends 1-RTT data and has it ACKed.
+[TODO: I believe that with the changes to recovery, if the client
+sends 1-RTT data it will be transmitted, but I need to check. Ian?]
+
+
+\begin{figure}[H]
+\begin{center}
+\resizebox{0.8\columnwidth}{!}{\begin{msc}{}
+  \drawframe{none}
+  \setlength{\topheaddist}{0cm}
+  \setlength{\instdist}{8.5cm}
+  \setlength{\instwidth}{1.75cm}
+  \declinst{cl}{}{Client $C$}
+  \dummyinst{drop}
+  \declinst{sr}{}{Server $S$}
+
+  \mess{\emph{Initial [C]}}{cl}{sr}
+  \nextlevel[2]
+  \mess{\emph{Initial [SH], Handshake[EE...SFIN]}}{sr}{cl}
+  \nextlevel
+  \action*{Server knows 1-RTT keys}{sr}
+  \nextlevel[2]
+  \mess{\emph{Handshake [CFIN]}}{cl}{sr}
+  \nextlevel
+  \action*{Client knows 1-RTT keys; Handshake Complete}{cl}
+  \action*{Handshake Complete}{sr}
+  \nextlevel[2]
+  \mess{\emph{Handshake [ACK]}}{sr}{drop}
+  \nextlevel[2]  
+  \mess{\emph{1-RTT [DATA]}}{sr}{cl}
+  \nextlevel[2]
+  \mess{\emph{1-RTT [ACK]}}{cl}{sr}
+  \nextlevel    
+  \action*{Handshake Confirmed; Drop Handshake Keys}{sr}
+  \nextlevel[2]
+  \action*{IGNORED}{sr}
+  \nextlevel[.5]
+  \mess{\emph{Handshake [CFIN]}}{cl}{sr}
+  \nextlevel[2]
+\end{msc}
+}
+\end{center}
+\caption{CFIN Retransmission with dropped ACK}
+\label{fig:cfin-retransmit}
+\end{figure}
 
 
 \subsection{Outstanding Handshake Data During Migration}
@@ -274,15 +322,10 @@ on its own CFIN (which is natural), the server will never be
 able to process 1-RTT packets from the client when handshake
 data is outstanding, in which case the problem goes away. Note
 that this is separate from the packet loss edge cases, because
-the client can guarantee this condition.
+the client can guarantee this condition. Note that the server
+can still receive late copies of the CFIN, and would
+need to be required to ACK them on the original path.
 
-An alternative approach is to have the server implement
-implicit ACK where it discards handshake data once it receives
-any valid 1-RTT data from the client. Note that it still needs to
-be able to receive handshake data and send ACKs for it, but
-the client can be required to send that down the initial
-path and/or implicitly ACK on migration success (which inevitably
-includes verification of a 1-RTT ACK).
 
 \section{Server sends HANDSHAKE_DONE(PR 3145)
 }
@@ -400,6 +443,8 @@ packet. However, it recreates the problem with the status
 quo which is that if the client never sends 1-RTT data but
 the server does, you can end up with the client indefinitely
 retransmitting ACKS.
+
+
 
 
 
