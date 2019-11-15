@@ -91,7 +91,7 @@ We show these scenarios below.
 \subsection{Deadlock with Missing ACKs}
 \label{sec:deadl-with-miss}
 
-[TODO: Diagram needed]
+
 
 \subsection{Outstanding Handshake Data During Migration}
 \label{sec:outst-handsh-data}
@@ -348,7 +348,58 @@ on the client).
 [TODO: Make diagram]
 
 
+\section{Server drops keys on receipt of 1-RTT Packet}
+\label{sec:server-drops-keys}
 
+In Ian's doc. he suggested that we require the server to drop
+handshake keys when it receives a 1-RTT packet, i.e., one RTT
+sooner than the current design.
+
+\begin{figure}[H]
+\begin{center}
+\resizebox{0.8\columnwidth}{!}{\begin{msc}{}
+  \drawframe{none}
+  \setlength{\topheaddist}{0cm}
+  \setlength{\instdist}{8.5cm}
+  \setlength{\instwidth}{1.75cm}
+  \declinst{cl}{}{Client $C$}
+  \declinst{sr}{}{Server $S$}
+
+  \mess{\emph{Initial [C]}}{cl}{sr}
+  \nextlevel[2]
+  \mess{\emph{Initial [SH], Handshake[EE...SFIN]}}{sr}{cl}
+  \nextlevel
+  \action*{Server knows 1-RTT keys}{sr}
+  \nextlevel[2]
+  \mess{\emph{Handshake [CFIN]}}{cl}{sr}
+  \nextlevel
+  \action*{Client knows 1-RTT keys; Handshake Complete}{cl}
+  \action*{Handshake Complete}{sr}
+  \nextlevel[2]
+  \mess{\emph{1-RTT [DATA]}}{cl}{sr}
+  \nextlevel[2]  
+  \action*{Handshake Confirmed; Drop Handshake Keys}{sr}  
+  \nextlevel[2]
+  \mess{\emph{1-RTT [ACK]}}{sr}{cl}
+  \nextlevel
+  \action*{Handshake Confirmed; Drop Handshake Keys}{cl}
+  \nextlevel[2]
+\end{msc}
+}
+\end{center}
+\caption{Server drop on 1-RTT}
+\label{fig:server-drop-on-10rtt}
+\end{figure}
+
+
+This solves the migration problem because the server will no
+longer send handshake packets (or ACKs) to the client after
+receiving the first 1-RTT packet, and the client is forbidden
+to initiate migration prior to having sent and received a 1-RTT
+packet. However, it recreates the problem with the status
+quo which is that if the client never sends 1-RTT data but
+the server does, you can end up with the client indefinitely
+retransmitting ACKS.
 
 
 
